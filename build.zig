@@ -283,15 +283,6 @@ pub const App = struct {
             // Set install directory to '{prefix}/www'
             app.getInstallStep().?.dest_dir = web_install_dir;
 
-            inline for (.{ "/src/platform/mach.js", "/libs/sysjs/src/mach-sysjs.js" }) |js| {
-                const install_js = app.b.addInstallFileWithDir(
-                    .{ .path = sdkPath(js) },
-                    web_install_dir,
-                    std.fs.path.basename(js),
-                );
-                app.getInstallStep().?.step.dependOn(&install_js.step);
-            }
-
             const html_generator = app.b.addExecutable("html-generator", sdkPath("/tools/html-generator/main.zig"));
             const run_html_generator = html_generator.run();
             const html_file_name = std.mem.concat(
@@ -301,6 +292,20 @@ pub const App = struct {
             ) catch unreachable;
             defer app.b.allocator.free(html_file_name);
             run_html_generator.addArgs(&.{ html_file_name, app.name });
+
+            inline for (.{ 
+                .{"mach","/src/platform/mach.js"}, 
+                .{"sysjs","/libs/sysjs/src/mach-sysjs.js"},
+            }) |js| {
+                const basename = std.fs.path.basename(js[1]);
+                run_html_generator.addArgs(&.{ js[0], basename });
+                const install_js = app.b.addInstallFileWithDir(
+                    .{ .path = sdkPath(js[1]) },
+                    web_install_dir,
+                    basename,
+                );
+                app.getInstallStep().?.step.dependOn(&install_js.step);
+            }
 
             run_html_generator.cwd = app.b.getInstallPath(web_install_dir, "");
             app.getInstallStep().?.step.dependOn(&run_html_generator.step);

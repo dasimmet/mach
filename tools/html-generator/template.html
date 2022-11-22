@@ -8,16 +8,11 @@
 
 <body>
   <script type="module">
-    import { mach } from "./mach.js";
-    import { sysjs } from "./mach-sysjs.js";
     import setupWasmserve from "./wasmserve.js";
+    { js_imports }
 
     setupWasmserve();
-
-    let imports = {
-      mach,
-      sysjs,
-    };
+    let imports = { { js_exports } };
 
     fetch("{ app_name }.wasm")
       .then(response => response.arrayBuffer())
