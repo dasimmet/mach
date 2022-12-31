@@ -44,9 +44,9 @@ pub fn init(allocator: std.mem.Allocator, core: *Core) !void {
 /// Set runtime options for application, like title, window size etc.
 ///
 /// See mach.Options for details
-pub fn setOptions(core: *Core, options: structs.Options) !void {
-    try core.internal.setOptions(options);
-    core.options = options;
+pub fn setOptions(core: *Core, options: structs.Optional(structs.Options)) !void {
+    structs.OptionalUpdate(core.options, options);
+    try core.internal.setOptions(core.options);
 }
 
 // Signals mach to stop the update loop.

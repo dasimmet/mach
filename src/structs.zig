@@ -1,4 +1,5 @@
 const gpu = @import("gpu");
+const std = @import("std");
 const enums = @import("enums.zig");
 
 pub const Size = struct {
@@ -60,6 +61,56 @@ pub const Options = struct {
     /// If set, optimize for regular applications rather than games. e.g. disable Linux gamemode / process priority, prefer low-power GPU (if preference is .undefined), etc.
     is_app: bool = false,
 };
+
+const OptionalIsSet = enum {
+    set,
+    unset,
+};
+
+inline fn OptionalValue(comptime T: type) type{
+    return union(OptionalIsSet) {
+        set: T,
+        unset: bool,
+    };
+}
+
+// Updates a struct using its Optional version with all set fields
+pub fn OptionalUpdate(target: anytype, me: Optional(@TypeOf(target))) void {
+    for (std.meta.fields(@TypeOf(me))) |f| {
+        switch (@field(me, f.name)) {
+            .set => |value| {
+                @field(target, f.name) = value;
+            },
+            else => {},
+        }
+    }
+}
+
+// converts all struct fields to OptionalValue enum type with default unset value
+pub inline fn Optional(comptime T: type) type {
+    var fields: []const std.builtin.Type.StructField = &[0]std.builtin.Type.StructField{};
+    inline for (std.meta.fields(T)) |f| {
+        const fType = OptionalValue(f.type);
+        fields = fields ++ .{.{
+            .name = f.name,
+            .type = fType,
+            // .default_value = &fType.unset,
+            .default_value = @ptrCast(?*const anyopaque, &fType.unset),
+            .is_comptime = f.is_comptime,
+            .alignment = f.alignment,
+        }};
+    }
+    const info = @typeInfo(T).Struct;
+    return @Type(.{
+        .Struct = .{
+            .layout = info.layout,
+            .fields = fields,
+            .decls = info.decls,
+            .is_tuple = info.is_tuple,
+        },
+    });
+}
+
 
 pub const Event = union(enum) {
     key_press: KeyEvent,
